@@ -68,7 +68,9 @@ public class RpcClient : IAsyncDisposable
         var tcs = new TaskCompletionSource<string>(
                 TaskCreationOptions.RunContinuationsAsynchronously);
         _callbackMapper.TryAdd(correlationId, tcs);
-
+        
+        try
+        {
         var messageBytes = Encoding.UTF8.GetBytes(message);
         await _channel.BasicPublishAsync(exchange: string.Empty, routingKey: QUEUE_NAME,
             mandatory: true, basicProperties: props, body: messageBytes);
@@ -81,6 +83,11 @@ public class RpcClient : IAsyncDisposable
             });
 
         return await tcs.Task;
+        }
+        finally
+        {
+            _callbackMapper.TryRemove(correlationId, out _);
+        }
     }
 
     public async ValueTask DisposeAsync()
